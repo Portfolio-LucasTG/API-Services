@@ -1,0 +1,31 @@
+# env
+.env
+.venv/
+
+# python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# node
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+
+# editors / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+
+# claude code (personal settings stay local)
+.claude/settings.local.json
+CLAUDE.local.md

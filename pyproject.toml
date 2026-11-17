@@ -1,0 +1,117 @@
+# Workspace root: holds shared tool configuration and dev dependencies only.
+# Each service (common, api, seeder) has its own pyproject.toml with runtime deps.
+
+[project]
+name = "iris-explorer"
+version = "0.1.0"
+description = "Iris dataset: PostgreSQL + seeder + Flask REST API + Vue frontend"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["common", "api", "seeder"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "pre-commit>=4.0",
+]
+
+# ----------------------------------------------------------------------------- ruff
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["common/src", "api/src", "seeder/src"]
+extend-exclude = ["frontend", "**/migrations"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "N",        # pep8-naming
+    "UP",       # pyupgrade
+    "B",        # bugbear
+    "A",        # builtins shadowing
+    "C4",       # comprehensions
+    "SIM",      # simplify
+    "RET",      # return
+    "ARG",      # unused arguments
+    "PTH",      # use pathlib
+    "DTZ",      # timezone-aware datetimes
+    "T20",      # no print
+    "S",        # bandit (security)
+    "BLE",      # blind except
+    "TID",      # tidy imports
+    "PT",       # pytest style
+    "ERA",      # commented-out code
+    "PL",       # pylint
+    "RUF",      # ruff-specific
+]
+ignore = [
+    "PLR0913",  # too many arguments: Pydantic/Settings constructors
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101", "PLR2004", "ARG001", "S105", "S106"]
+".claude/hooks/*.py" = ["S603", "S607"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["iris_common", "iris_api", "iris_seeder"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+# ----------------------------------------------------------------------------- mypy
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+files = ["common/src", "api/src", "seeder/src"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["kagglehub", "kagglehub.*"]
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+# ----------------------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+testpaths = ["common/tests", "api/tests", "seeder/tests"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--import-mode=importlib",
+    "--cov",
+    "--cov-report=term-missing:skip-covered",
+]
+markers = [
+    "integration: needs PostgreSQL at TEST_DATABASE_URL (skipped when unset)",
+]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+branch = true
+source = ["iris_common", "iris_api", "iris_seeder"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]

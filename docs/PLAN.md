@@ -1,0 +1,173 @@
+# Implementation plan
+
+Work through the steps in order, one per Claude Code session/turn (`/next-step`).
+Each step ends green: `make check` passes and the "Done when" commands work.
+After each step, run the `code-reviewer` agent, then commit.
+
+---
+
+## Step 0 — Bootstrap the workspace
+Config files already exist (`CLAUDE.md`s, `.claude/`, `pyproject.toml`, `Makefile`, pre-commit, CI).
+
+- [ ] Create the three uv workspace members with `src/` layout and an empty `tests/` package each:
+  - `common/` → distribution `iris-common`, package `iris_common`; deps: `sqlalchemy>=2`, `psycopg[binary]>=3`
+  - `seeder/` → `iris-seeder`, package `iris_seeder`; deps: `iris-common`, `pydantic>=2`, `pydantic-settings`, `kagglehub`; script `iris-seed = "iris_seeder.__main__:main"`
+  - `api/` → `iris-api`, package `iris_api`; deps: `iris-common`, `flask>=3`, `pydantic>=2`, `pydantic-settings`, `gunicorn`
+  - Workspace deps via `[tool.uv.sources] iris-common = { workspace = true }`
+- [ ] Each package has a `py.typed` file and a trivial test (`test_import.py`) so pytest/coverage run.
+- [ ] `uv sync --all-packages` creates `uv.lock`; `uv run pre-commit install`.
+- [ ] Add a short `README.md` (what it is, `make setup`, `make up`, URLs).
+
+**Done when:** `make setup && make check` passes; `uv run pre-commit run --all-files` passes.
+
+---
+
+## Step 1 — Shared model (`common`)
+- [ ] `iris_common/models.py`: `Base(DeclarativeBase)`, `Species(StrEnum)` = setosa/versicolor/virginica,
+      `Iris` table `iris`: `id` int PK (no autoincrement — comes from the CSV),
+      four `Numeric(3, 1)` non-null columns, `species` `String(16)` non-null + index,
+      `CheckConstraint` on species values.
+- [ ] `iris_common/db.py`: `make_engine(url: str) -> Engine`, `make_session_factory(engine) -> sessionmaker[Session]`.
+- [ ] Tests (SQLite): table creation, insert/select round-trip with `Decimal`, species check constraint rejects bad value.
+- [ ] Integration test fixture in `common/tests/conftest.py` (re-usable pattern): `pg_engine` that skips when
+      `TEST_DATABASE_URL` is unset, creates tables, and drops them after the session.
+
+**Done when:** `make check` passes.
+
+---
+
+## Step 2 — Seeder: parsing and source resolution
+- [ ] Download the dataset once on your machine and vendor it:
+      `uv run --with kagglehub python -c "import kagglehub; print(kagglehub.dataset_download('uciml/iris'))"`
+      then copy `Iris.csv` to `seeder/data/Iris.csv`. *(Manual step for the developer — Claude asks.)*
+- [ ] `config.py` (`Settings` via pydantic-settings), `parsing.py` (`IrisRow` model + `read_rows`),
+      `source.py` (`resolve_dataset_path`) exactly as described in `seeder/CLAUDE.md`.
+- [ ] Test fixtures: `small.csv` (2 rows per species), `bad_number.csv`, `bad_species.csv`, `missing_column.csv`.
+- [ ] Tests: species mapping; each bad file raises an error that names the line; `DATASET_PATH` wins;
+      kagglehub success path (monkeypatched to return a tmp dir); download failure with fallback on → vendored file;
+      fallback off → error; the vendored file has 150 rows, 50 per species.
+
+**Done when:** `make check` passes.
+
+---
+
+## Step 3 — Seeder: loading + database container
+- [ ] `loader.py`: `upsert_rows(engine, rows) -> int` with `sqlalchemy.dialects.postgresql.insert(...).on_conflict_do_update`,
+      one transaction, `create_all` first.
+- [ ] `__main__.py`: `main() -> int` — logging setup, run, return 0/1; never raises to the top.
+- [ ] `docker-compose.yml` with `db` and `seeder`:
+  - `db`: `postgres:17-alpine`, env from `.env`, named volume `pgdata`, healthcheck `pg_isready`,
+    port `${DB_PORT}:5432`, mount `db/init/` to `/docker-entrypoint-initdb.d/`.
+  - `db/init/01-test-db.sql`: `CREATE DATABASE iris_test;` (used by integration tests).
+  - `seeder`: build `context: .`, `dockerfile: seeder/Dockerfile`; `depends_on: db: condition: service_healthy`;
+    `restart: "no"`; named volume `kagglehub-cache` → `/home/app/.cache/kagglehub`.
+- [ ] `seeder/Dockerfile`: `python:3.12-slim`, uv from `ghcr.io/astral-sh/uv`, `uv sync --frozen --no-dev --package iris-seeder`,
+      copies `seeder/data/`, non-root user `app`, `CMD ["iris-seed"]`.
+- [ ] Tests: integration — upsert inserts 6 fixture rows; running twice keeps 6 rows; changed value is updated.
+      Unit — `main()` returns 1 on parse error and on DB error (monkeypatched), 0 on success.
+
+**Done when:** `make check` and `make test-integration` pass;
+`docker compose up -d --wait db && docker compose run --rm seeder && docker compose run --rm seeder`
+ends with `SELECT species, count(*) FROM iris GROUP BY 1` = 50/50/50.
+
+---
+
+## Step 4 — API skeleton
+- [ ] `create_app(settings=None)`, `config.py`, `db.py` (scoped session per request, closed on teardown),
+      `errors.py` (JSON envelope for 400/404/405/500 incl. Werkzeug `HTTPException`s), `GET /health`.
+- [ ] `api/tests/conftest.py`: `app` fixture on `sqlite+pysqlite:///:memory:` with `StaticPool`,
+      tables created, sample rows (3 per species with distinct values); `client` fixture.
+- [ ] Tests: health 200; health 503 when the session raises; unknown route → 404 envelope; POST → 405 envelope;
+      an unexpected exception → 500 envelope without stack trace.
+
+**Done when:** `make check` passes.
+
+---
+
+## Step 5 — List and retrieve
+- [ ] `schemas.py`: `IrisOut` (floats in JSON), `ListResponse`.
+- [ ] `queries.py`: `build_list_query(species, filters)`; `routes.py`: `GET /iris/<species>` and `GET /iris/<species>/<int:id>`.
+- [ ] Tests: each species returns only its rows ordered by id; `count` is correct; unknown species → 404 `species_not_found`;
+      retrieve OK; retrieve with an id of another species → 404 `not_found`; nonexistent id → 404.
+
+**Done when:** `make check` passes.
+
+---
+
+## Step 6 — Filters
+- [ ] `ListQuery` Pydantic model with `extra="forbid"`: exact / `_min` / `_max` for the five columns
+      (`id*` ints, others `Decimal` with max 1 decimal place); model validator for `_min > _max`.
+- [ ] Translate validation errors to 400 `invalid_query` with `details`.
+- [ ] Tests (parametrize!): exact match per column, min only, max only, min+max, combined columns,
+      no match → empty list, unknown param, bad number, too many decimals, min > max.
+
+**Done when:** `make check` passes.
+
+---
+
+## Step 7 — Pagination
+- [ ] `page` / `per_page` in `ListQuery`; pagination only when at least one is present; `PageResponse`.
+- [ ] Count with `select(func.count()).select_from(subquery)` using the same filters.
+- [ ] Tests: no params → `ListResponse` shape; `page=1` → `per_page` 10 by default; `per_page=2` math for
+      `total`/`pages`; last partial page; page past the end → empty items; `per_page=0`, `101`, `page=0` → 400;
+      pagination + filters together.
+
+**Done when:** `make check` passes.
+
+---
+
+## Step 8 — API container
+- [ ] `api/Dockerfile` (same pattern as seeder), `CMD ["gunicorn", "-b", "0.0.0.0:5000", "-w", "2", "iris_api:create_app()"]`.
+- [ ] Compose `api`: `depends_on: seeder: condition: service_completed_successfully`,
+      healthcheck with `python -c "urllib.request.urlopen('http://localhost:5000/health')"`, port `${API_PORT}:5000`.
+
+**Done when:** `make up` then `curl localhost:5000/iris/setosa?page=1` returns 10 items and `total: 50`.
+
+---
+
+## Step 9 — Frontend scaffold
+- [ ] `npm create vue@latest frontend` with TypeScript, Router, Vitest, ESLint, Prettier (no Pinia, no JSX, no e2e).
+      Keep the existing `frontend/CLAUDE.md`.
+- [ ] Ensure scripts `lint`, `format`, `format:check`, `type-check`, `test:unit` (with `--coverage`, `@vitest/coverage-v8`)
+      exist; ESLint runs with `--max-warnings=0`; coverage thresholds 80 % in `vitest.config.ts`.
+- [ ] `vite.config.ts` dev proxy `/api` → `http://localhost:5000` with prefix rewrite.
+- [ ] Remove the scaffold's demo components/tests.
+
+**Done when:** `make check` (now including frontend) passes; `npm run build` passes.
+
+---
+
+## Step 10 — Frontend API client
+- [ ] `src/api/types.ts` mirroring the contract; `src/api/iris.ts` with `listIris` / `getIris`; an `ApiError` class
+      carrying `status`, `code`, `message`.
+- [ ] Tests: query string building (omits empty filters, adds pagination only when enabled), successful parse,
+      API error envelope → `ApiError`, network failure → `ApiError` with code `network_error`.
+
+**Done when:** `make check` passes.
+
+---
+
+## Step 11 — Frontend screens
+- [ ] Router, `SpeciesTabs`, `IrisTable`, `IrisFilters`, `PaginationControls`, `ErrorBanner`,
+      `useIrisList` (URL query ⇄ state), `SpeciesListView`, `IrisDetailView`, `NotFoundView`.
+- [ ] Tests: filters apply/clear update the route query; pagination toggle and next/prev; loading/empty/error states;
+      unknown species route → not found; row click navigates to detail; detail shows 404 message.
+
+**Done when:** `make check` passes; with `make up` running the API and `npm run dev`, the UI works manually.
+
+---
+
+## Step 12 — Frontend container + full stack
+- [ ] `frontend/Dockerfile` (node:22-alpine build → nginx:alpine), `nginx.conf` with SPA fallback and `/api/` proxy.
+- [ ] Compose `frontend`: `depends_on: api: condition: service_healthy`, port `${FRONTEND_PORT}:80`.
+
+**Done when:** `make up && make smoke` prints `smoke OK`; http://localhost:8080 works.
+
+---
+
+## Step 13 — Polish
+- [ ] README: architecture diagram (Mermaid), endpoints with examples, dev workflow, how to run tests.
+- [ ] CI green on GitHub (python, frontend, compose jobs).
+- [ ] Run `code-reviewer` on the whole repo (`git diff` against the first commit) and fix findings.
+
+**Done when:** CI is green on `main`.

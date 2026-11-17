@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(make:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv run:*)",
+      "Bash(uv add:*)",
+      "Bash(uv lock:*)",
+      "Bash(uv tree:*)",
+      "Bash(npm --prefix frontend:*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(npm ci:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx prettier:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(docker compose build:*)",
+      "Bash(docker compose up:*)",
+      "Bash(docker compose ps:*)",
+      "Bash(docker compose logs:*)",
+      "Bash(docker compose run:*)",
+      "Bash(docker compose exec:*)",
+      "Bash(docker compose stop:*)",
+      "Bash(docker compose down)",
+      "Bash(docker compose config:*)",
+      "Bash(curl -s http://localhost:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git branch:*)"
+    ],
+    "ask": [
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./**/.env)",
+      "Edit(./.env)",
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(docker compose down -v:*)",
+      "Bash(docker system prune:*)",
+      "Bash(pip install:*)",
+      "Bash(rm -rf:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/format_file.py\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -NonInteractive -Command \"(New-Object Media.SoundPlayer 'C:/Windows/Media/Windows Notify System Generic.wav').PlaySync()\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

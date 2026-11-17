@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: iris
+          POSTGRES_PASSWORD: iris
+          POSTGRES_DB: iris_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U iris" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://iris:iris@localhost:5432/iris_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --all-packages --locked
+      - run: uv run ruff check --output-format=github .
+      - run: uv run ruff format --check .
+      - run: uv run mypy
+      - run: uv run pytest   # unit + integration, coverage gate applies
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - id: exists
+        working-directory: .
+        run: echo "present=$([ -f frontend/package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - if: steps.exists.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - if: steps.exists.outputs.present == 'true'
+        run: npm ci
+      - if: steps.exists.outputs.present == 'true'
+        run: npm run lint
+      - if: steps.exists.outputs.present == 'true'
+        run: npm run format:check
+      - if: steps.exists.outputs.present == 'true'
+        run: npm run type-check
+      - if: steps.exists.outputs.present == 'true'
+        run: npm run test:unit
+      - if: steps.exists.outputs.present == 'true'
+        run: npm run build
+
+  compose:
+    runs-on: ubuntu-latest
+    needs: [python, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - id: exists
+        run: echo "present=$([ -f docker-compose.yml ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - if: steps.exists.outputs.present == 'true'
+        run: cp .env.example .env
+      - if: steps.exists.outputs.present == 'true'
+        run: docker compose up -d --build --wait
+        env:
+          DATASET_PATH: /app/data/Iris.csv   # no Kaggle download in CI
+      - if: steps.exists.outputs.present == 'true'
+        run: make smoke
+      - if: failure() && steps.exists.outputs.present == 'true'
+        run: docker compose logs
+      - if: always() && steps.exists.outputs.present == 'true'
+        run: docker compose down -v
