@@ -37,13 +37,13 @@ Config files already exist (`CLAUDE.md`s, `.claude/`, `pyproject.toml`, `Makefil
 ---
 
 ## Step 2 — Seeder: parsing and source resolution
-- [ ] Download the dataset once on your machine and vendor it:
+- [x] Download the dataset once on your machine and vendor it:
       `uv run --with kagglehub python -c "import kagglehub; print(kagglehub.dataset_download('uciml/iris'))"`
       then copy `Iris.csv` to `seeder/data/Iris.csv`. *(Manual step for the developer — Claude asks.)*
-- [ ] `config.py` (`Settings` via pydantic-settings), `parsing.py` (`IrisRow` model + `read_rows`),
+- [x] `config.py` (`Settings` via pydantic-settings), `parsing.py` (`IrisRow` model + `read_rows`),
       `source.py` (`resolve_dataset_path`) exactly as described in `seeder/CLAUDE.md`.
-- [ ] Test fixtures: `small.csv` (2 rows per species), `bad_number.csv`, `bad_species.csv`, `missing_column.csv`.
-- [ ] Tests: species mapping; each bad file raises an error that names the line; `DATASET_PATH` wins;
+- [x] Test fixtures: `small.csv` (2 rows per species), `bad_number.csv`, `bad_species.csv`, `missing_column.csv`.
+- [x] Tests: species mapping; each bad file raises an error that names the line; `DATASET_PATH` wins;
       kagglehub success path (monkeypatched to return a tmp dir); download failure with fallback on → vendored file;
       fallback off → error; the vendored file has 150 rows, 50 per species.
 
