@@ -97,7 +97,7 @@ addopts = [
     "--strict-config",
     "--import-mode=importlib",
     "--cov",
-    "--cov-report=term-missing:skip-covered",
+    "--cov-report=term-missing",
 ]
 markers = [
     "integration: needs PostgreSQL at TEST_DATABASE_URL (skipped when unset)",
@@ -106,11 +106,12 @@ filterwarnings = ["error"]
 
 [tool.coverage.run]
 branch = true
-source = ["iris_common", "iris_api", "iris_seeder"]
+source = ["common/src", "api/src", "seeder/src"]
 
 [tool.coverage.report]
 fail_under = 90
 show_missing = true
+skip_covered = true
 exclude_also = [
     "if TYPE_CHECKING:",
     "if __name__ == .__main__.:",
