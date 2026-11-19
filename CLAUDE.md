@@ -11,6 +11,7 @@ exposes it through a read-only REST API and shows it in a Vue.js frontend.
 | `seeder`   | `seeder/`   | Python 3.12, SQLAlchemy 2, kagglehub (one-shot job)      | —        |
 | `api`      | `api/`      | Python 3.12, Flask 3, SQLAlchemy 2, Pydantic 2, gunicorn | 5000     |
 | `frontend` | `frontend/` | Vue 3, TypeScript, Vite, Vue Router, nginx               | 8080     |
+| `adminer`  | —           | Adminer (dev-only DB browser, bound to localhost)       | 8081     |
 | (library)  | `common/`   | `iris_common`: SQLAlchemy model, engine/session helpers  | —        |
 
 Startup order in Compose: `db` (healthy) → `seeder` (completed successfully) → `api` (healthy) → `frontend`.

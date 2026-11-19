@@ -32,6 +32,7 @@ make up                # build and start the stack
 | http://localhost:8080/api/iris/setosa | API through the frontend proxy (as the browser uses it) |
 | http://localhost:5000/health          | API health check (direct)                               |
 | http://localhost:5000/iris/setosa     | API: list one species (direct)                          |
+| http://localhost:8081                 | Adminer DB browser (dev only; server `db`, user `iris`) |
 
 Run `make help` for all commands; `make check` runs lint, type checks and tests.
 See `docs/PLAN.md` for the implementation plan and `api/CLAUDE.md` for the API contract.
