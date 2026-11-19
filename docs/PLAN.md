@@ -52,25 +52,25 @@ Config files already exist (`CLAUDE.md`s, `.claude/`, `pyproject.toml`, `Makefil
 ---
 
 ## Step 3 — Seeder: loading + database container
-- [ ] `loader.py`: `upsert_rows(engine, rows) -> int` with `sqlalchemy.dialects.postgresql.insert(...).on_conflict_do_update`,
+- [x] `loader.py`: `upsert_rows(engine, rows) -> int` with `sqlalchemy.dialects.postgresql.insert(...).on_conflict_do_update`,
       one transaction, `create_all` first.
-- [ ] `__main__.py`: `main() -> int` — logging setup, run, return 0/1; never raises to the top.
-- [ ] `docker-compose.yml` with `db` and `seeder`:
+- [x] `__main__.py`: `main() -> int` — logging setup, run, return 0/1; never raises to the top.
+- [x] `docker-compose.yml` with `db` and `seeder`:
   - `db`: `postgres:17-alpine`, env from `.env`, named volume `pgdata`, healthcheck `pg_isready`,
     port `${DB_PORT}:5432`, mount `db/init/` to `/docker-entrypoint-initdb.d/`.
   - `db/init/01-test-db.sql`: `CREATE DATABASE iris_test;` (used by integration tests).
   - `seeder`: build `context: .`, `dockerfile: seeder/Dockerfile`; `depends_on: db: condition: service_healthy`;
     `restart: "no"`; named volume `kagglehub-cache` → `/home/app/.cache/kagglehub`.
-  - `adminer`: `adminer:4`, `depends_on: db: condition: service_healthy`,
+  - `adminer`: `adminer:latest`, `depends_on: db: condition: service_healthy`,
     `ADMINER_DEFAULT_SERVER=db`, port `127.0.0.1:${ADMINER_PORT}:8080` (dev-only DB browser, localhost only;
     `ADMINER_PORT=8081` in `.env.example` because the frontend uses 8080). No healthcheck: nothing depends on it.
   - Add `adminer` to the services table in the root `CLAUDE.md` and its URL to `README.md`.
-- [ ] `seeder/Dockerfile`: `python:3.12-slim`, uv from `ghcr.io/astral-sh/uv`, `uv sync --frozen --no-dev --package iris-seeder`,
+- [x] `seeder/Dockerfile`: `python:3.12-slim`, uv from `ghcr.io/astral-sh/uv`, `uv sync --frozen --no-dev --package iris-seeder`,
       copies `seeder/data/`, non-root user `app`, `CMD ["iris-seed"]`.
       Keep the workspace layout (`/app/seeder/src`, `/app/seeder/data`) and the editable install uv does by default:
       `source.VENDORED_CSV` is resolved relative to the package. Check with
       `docker compose run --rm seeder python -c "from iris_seeder.source import VENDORED_CSV; assert VENDORED_CSV.is_file()"`.
-- [ ] Tests: integration — upsert inserts 6 fixture rows; running twice keeps 6 rows; changed value is updated.
+- [x] Tests: integration — upsert inserts 6 fixture rows; running twice keeps 6 rows; changed value is updated.
       Unit — `main()` returns 1 on parse error and on DB error (monkeypatched), 0 on success.
 
 **Done when:** `make check` and `make test-integration` pass;
