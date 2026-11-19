@@ -61,17 +61,6 @@
           }
         ]
       }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell.exe -NoProfile -NonInteractive -Command \"(New-Object Media.SoundPlayer 'C:/Windows/Media/Windows Notify System Generic.wav').PlaySync()\"",
-            "timeout": 10
-          }
-        ]
-      }
     ]
   }
 }

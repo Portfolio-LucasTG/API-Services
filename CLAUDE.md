@@ -72,10 +72,33 @@ Adding dependencies:
   and use `TEST_DATABASE_URL`; they are skipped automatically when it is not set.
 - Use small fixtures (a handful of rows per species), not the full dataset, in unit tests.
 - Frontend: Vitest + @vue/test-utils. Mock `fetch`, not components.
+- Always run tests from the repo root (`make test` / `uv run pytest`); coverage config depends on it.
 
 ### Git
-- Conventional Commits (`feat(api): add pagination`, `test(seeder): ...`, `chore: ...`).
-- One plan step = one commit (or a few small ones). Run `make check` before committing.
+- Conventional Commits (`feat(api): add pagination`, `test(seeder): ...`, `chore: ...`),
+  prefixed with the plan step being worked on: `[Step 5] feat(api): add list and retrieve endpoints`.
+  Use `[Plan]` for changes outside any step.
+- Every commit has a body (blank line after the subject) with short bullets explaining what it adds
+  or changes and why, so the commit is understandable without reading the diff.
+- One plan step = a small set of commits. Run `make check` before committing.
+- When changes touch more than one group of files, split them into one commit per group
+  (scope in parentheses), in this order:
+
+  | Group      | Files                                                                                                  | Example message        |
+  |------------|--------------------------------------------------------------------------------------------------------|------------------------|
+  | `tooling`  | root `pyproject.toml`, `uv.lock`, `.python-version`, `.pre-commit-config.yaml`, `Makefile`, `.github/` | `chore(tooling): ...`  |
+  | `env`      | `docker-compose.yml`, `*/Dockerfile`, `.dockerignore`, `.env.example`, `db/`                           | `build(env): ...`      |
+  | `common`   | `common/` (except tests)                                                                               | `feat(common): ...`    |
+  | `seeder`   | `seeder/` (except tests)                                                                               | `feat(seeder): ...`    |
+  | `api`      | `api/` (except tests)                                                                                  | `feat(api): ...`       |
+  | `frontend` | `frontend/` (except tests)                                                                             | `feat(frontend): ...`  |
+  | `tests`    | `*/tests/`, `frontend/**/*.spec.ts`, test fixtures                                                     | `test(<service>): ...` |
+  | `project`  | `README.md`, `CLAUDE.md` files, `.claude/`, `.gitignore`, `.editorconfig`                              | `chore(project): ...`  |
+  | `docs`     | `docs/` (plan ticks go last)                                                                           | `docs: ...`            |
+
+  Skip empty groups; another group may be proposed when changes don't fit.
+- Before committing or pushing, show the user a table of the planned commits (number, group, files, message)
+  and wait for approval.
 
 ## Don't
 - Don't read or edit `.env`; change `.env.example` instead.
