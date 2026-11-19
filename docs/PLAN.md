@@ -23,13 +23,13 @@ Config files already exist (`CLAUDE.md`s, `.claude/`, `pyproject.toml`, `Makefil
 ---
 
 ## Step 1 — Shared model (`common`)
-- [ ] `iris_common/models.py`: `Base(DeclarativeBase)`, `Species(StrEnum)` = setosa/versicolor/virginica,
+- [x] `iris_common/models.py`: `Base(DeclarativeBase)`, `Species(StrEnum)` = setosa/versicolor/virginica,
       `Iris` table `iris`: `id` int PK (no autoincrement — comes from the CSV),
       four `Numeric(3, 1)` non-null columns, `species` `String(16)` non-null + index,
       `CheckConstraint` on species values.
-- [ ] `iris_common/db.py`: `make_engine(url: str) -> Engine`, `make_session_factory(engine) -> sessionmaker[Session]`.
-- [ ] Tests (SQLite): table creation, insert/select round-trip with `Decimal`, species check constraint rejects bad value.
-- [ ] Integration test fixture in `common/tests/conftest.py` (re-usable pattern): `pg_engine` that skips when
+- [x] `iris_common/db.py`: `make_engine(url: str) -> Engine`, `make_session_factory(engine) -> sessionmaker[Session]`.
+- [x] Tests (SQLite): table creation, insert/select round-trip with `Decimal`, species check constraint rejects bad value.
+- [x] Integration test fixture in `common/tests/conftest.py` (re-usable pattern): `pg_engine` that skips when
       `TEST_DATABASE_URL` is unset, creates tables, and drops them after the session.
 
 **Done when:** `make check` passes.
