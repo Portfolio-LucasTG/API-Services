@@ -9,14 +9,14 @@ After each step, run the `code-reviewer` agent, then commit.
 ## Step 0 — Bootstrap the workspace
 Config files already exist (`CLAUDE.md`s, `.claude/`, `pyproject.toml`, `Makefile`, pre-commit, CI).
 
-- [ ] Create the three uv workspace members with `src/` layout and an empty `tests/` package each:
+- [x] Create the three uv workspace members with `src/` layout and an empty `tests/` package each:
   - `common/` → distribution `iris-common`, package `iris_common`; deps: `sqlalchemy>=2`, `psycopg[binary]>=3`
   - `seeder/` → `iris-seeder`, package `iris_seeder`; deps: `iris-common`, `pydantic>=2`, `pydantic-settings`, `kagglehub`; script `iris-seed = "iris_seeder.__main__:main"`
   - `api/` → `iris-api`, package `iris_api`; deps: `iris-common`, `flask>=3`, `pydantic>=2`, `pydantic-settings`, `gunicorn`
   - Workspace deps via `[tool.uv.sources] iris-common = { workspace = true }`
-- [ ] Each package has a `py.typed` file and a trivial test (`test_import.py`) so pytest/coverage run.
-- [ ] `uv sync --all-packages` creates `uv.lock`; `uv run pre-commit install`.
-- [ ] Add a short `README.md` (what it is, `make setup`, `make up`, URLs).
+- [x] Each package has a `py.typed` file and a trivial test (`test_import.py`) so pytest/coverage run.
+- [x] `uv sync --all-packages` creates `uv.lock`; `uv run pre-commit install`.
+- [x] Add a short `README.md` (what it is, `make setup`, `make up`, URLs).
 
 **Done when:** `make setup && make check` passes; `uv run pre-commit run --all-files` passes.
 
