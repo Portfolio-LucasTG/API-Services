@@ -29,7 +29,7 @@ seeder/
   data/Iris.csv            # vendored copy of the dataset (fallback + tests)
   src/iris_seeder/
     __main__.py            # main() -> int, sets up logging, calls run()
-    config.py              # Settings: DATABASE_URL, DATASET_PATH, KAGGLE_DATASET, SEED_ALLOW_FALLBACK
+    config.py              # Settings: DATABASE_URL, DATASET_PATH, KAGGLE_DATASET, SEED_ALLOW_FALLBACK, LOG_LEVEL
     source.py              # resolve_dataset_path(settings) -> Path
     parsing.py             # read_rows(path) -> list[IrisRow]
     loader.py              # upsert_rows(engine, rows) -> int
