@@ -32,11 +32,6 @@
       "Bash(git add:*)",
       "Bash(git branch:*)"
     ],
-    "ask": [
-      "Bash(git commit:*)",
-      "Bash(git checkout:*)",
-      "Bash(git switch:*)"
-    ],
     "deny": [
       "Read(./.env)",
       "Read(./**/.env)",
@@ -47,6 +42,11 @@
       "Bash(docker system prune:*)",
       "Bash(pip install:*)",
       "Bash(rm -rf:*)"
+    ],
+    "ask": [
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)"
     ]
   },
   "hooks": {
@@ -62,5 +62,9 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "egm@egm": true,
+    "ponytail@ponytail": true
   }
 }
