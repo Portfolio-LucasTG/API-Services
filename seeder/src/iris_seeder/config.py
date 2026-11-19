@@ -14,3 +14,4 @@ class Settings(BaseSettings):
     dataset_path: Path | None = None
     kaggle_dataset: str = "uciml/iris"
     seed_allow_fallback: bool = True
+    log_level: str = "INFO"
