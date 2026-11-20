@@ -26,7 +26,12 @@ def test_small_file_maps_species_and_values() -> None:
 
 @pytest.mark.parametrize(
     ("name", "line"),
-    [("bad_number.csv", 3), ("bad_species.csv", 4), ("missing_column.csv", 1)],
+    [
+        ("bad_number.csv", 3),
+        ("bad_species.csv", 4),
+        ("missing_column.csv", 1),
+        ("duplicate_id.csv", 4),
+    ],
 )
 def test_bad_file_error_names_line(name: str, line: int) -> None:
     with pytest.raises(DatasetParseError, match=rf"{name}:{line}:"):

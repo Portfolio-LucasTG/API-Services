@@ -69,3 +69,21 @@ def test_upsert_updates_changed_value(pg_engine: Engine) -> None:
 def test_upsert_nothing_creates_table(pg_engine: Engine) -> None:
     assert upsert_rows(pg_engine, []) == 0
     assert count_rows(pg_engine) == 0
+
+
+def test_upsert_deletes_rows_missing_from_input(pg_engine: Engine) -> None:
+    rows = read_rows(FIXTURES / "small.csv")
+    upsert_rows(pg_engine, rows)
+
+    upsert_rows(pg_engine, rows[:4])
+
+    with Session(pg_engine) as session:
+        assert session.scalars(select(Iris.id).order_by(Iris.id)).all() == [1, 2, 51, 52]
+
+
+def test_upsert_empty_input_keeps_existing_rows(pg_engine: Engine) -> None:
+    upsert_rows(pg_engine, read_rows(FIXTURES / "small.csv"))
+
+    upsert_rows(pg_engine, [])
+
+    assert count_rows(pg_engine) == 6
