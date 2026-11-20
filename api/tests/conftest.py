@@ -29,12 +29,16 @@ def _row(id_: int, species: Species, base: str) -> Iris:
     )
 
 
-# ids 1-3 setosa, 4-6 versicolor, 7-9 virginica; every row has distinct values.
-SAMPLE_ROWS = [
-    _row(i * 3 + n + 1, species, f"{i + 1}.{n}")
-    for i, species in enumerate(Species)
-    for n in range(3)
-]
+def sample_rows() -> list[Iris]:
+    """ids 1-3 setosa, 4-6 versicolor, 7-9 virginica; every row has distinct values.
+
+    Fresh objects per call: ORM instances committed in one test's session can't be re-inserted.
+    """
+    return [
+        _row(i * 3 + n + 1, species, f"{i + 1}.{n}")
+        for i, species in enumerate(Species)
+        for n in range(3)
+    ]
 
 
 @pytest.fixture
@@ -45,7 +49,7 @@ def engine() -> Iterator[Engine]:
     )
     Base.metadata.create_all(engine)
     with make_session_factory(engine)() as session:
-        session.add_all(SAMPLE_ROWS)
+        session.add_all(sample_rows())
         session.commit()
     yield engine
     engine.dispose()
