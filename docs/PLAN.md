@@ -81,11 +81,11 @@ ends with `SELECT species, count(*) FROM iris GROUP BY 1` = 50/50/50.
 ---
 
 ## Step 4 — API skeleton
-- [ ] `create_app(settings=None)`, `config.py`, `db.py` (scoped session per request, closed on teardown),
+- [x] `create_app(settings=None, engine=None)`, `config.py`, `db.py` (scoped session per request, closed on teardown),
       `errors.py` (JSON envelope for 400/404/405/500 incl. Werkzeug `HTTPException`s), `GET /health`.
-- [ ] `api/tests/conftest.py`: `app` fixture on `sqlite+pysqlite:///:memory:` with `StaticPool`,
+- [x] `api/tests/conftest.py`: `app` fixture on `sqlite+pysqlite:///:memory:` with `StaticPool`,
       tables created, sample rows (3 per species with distinct values); `client` fixture.
-- [ ] Tests: health 200; health 503 when the session raises; unknown route → 404 envelope; POST → 405 envelope;
+- [x] Tests: health 200; health 503 when the session raises; unknown route → 404 envelope; POST → 405 envelope;
       an unexpected exception → 500 envelope without stack trace.
 
 **Done when:** `make check` passes.
