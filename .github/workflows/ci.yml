@@ -73,7 +73,8 @@ jobs:
         run: docker compose up -d --build --wait
         env:
           DATASET_PATH: /app/data/Iris.csv   # no Kaggle download in CI
-      - if: steps.exists.outputs.present == 'true'
+      # smoke hits api (:5000) and frontend (:8080); skip until the full stack exists
+      - if: steps.exists.outputs.present == 'true' && hashFiles('frontend/Dockerfile') != ''
         run: make smoke
       - if: failure() && steps.exists.outputs.present == 'true'
         run: docker compose logs
