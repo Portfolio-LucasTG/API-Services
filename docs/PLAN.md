@@ -106,13 +106,16 @@ ends with `SELECT species, count(*) FROM iris GROUP BY 1` = 50/50/50.
 ---
 
 ## Step 6 — Filters
-- [ ] `ListQuery` Pydantic model with `extra="forbid"`: exact / `_min` / `_max` for the five columns
+- [x] `ListQuery` Pydantic model with `extra="forbid"`: exact / `_min` / `_max` for the five columns
       (`id*` ints, others `Decimal` with max 1 decimal place); model validator for `_min > _max`.
-- [ ] Errors from the model validator have an empty `loc`: give them `field: "query"` in `details` and name both
+- [x] Errors from the model validator have an empty `loc`: give them `field: "query"` in `details` and name both
       columns in the message (`id_min must be less than or equal to id_max`). Test: `?id_min=5&id_max=1` → that detail.
 - [x] Translate validation errors to 400 `invalid_query` with `details`. *(Done in Step 5; Step 6 adds the fields.)*
-- [ ] Tests (parametrize!): exact match per column, min only, max only, min+max, combined columns,
+- [x] Tests (parametrize!): exact match per column, min only, max only, min+max, combined columns,
       no match → empty list, unknown param, bad number, too many decimals, min > max.
+- [x] Review fixes: decimals capped at `max_digits=3` (huge values were a 500 on PostgreSQL);
+      empty values → 400 "Value must not be empty"; every `_min` > `_max` conflict reported, not just the first;
+      `id*` filters limited to int32 (shared `MAX_ID`); repeated params → 400.
 
 **Done when:** `make check` passes.
 
