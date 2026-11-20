@@ -2,7 +2,7 @@
 
 from collections.abc import Sequence
 
-from sqlalchemy import Engine
+from sqlalchemy import Engine, delete
 from sqlalchemy.dialects.postgresql import insert
 
 from iris_common.models import Base, Iris
@@ -10,8 +10,12 @@ from iris_seeder.parsing import IrisRow
 
 
 def upsert_rows(engine: Engine, rows: Sequence[IrisRow]) -> int:
-    """Create the table if needed and upsert ``rows`` by ``id`` in one transaction."""
+    """Create the table, then upsert ``rows`` by ``id`` and delete other ids, in one transaction.
+
+    Returns the number of rows upserted.
+    """
     Base.metadata.create_all(engine)
+    # An empty file is more likely a broken download than an empty dataset: keep the table.
     if not rows:
         return 0
     # .value: psycopg would otherwise adapt the StrEnum by its member name
@@ -23,4 +27,5 @@ def upsert_rows(engine: Engine, rows: Sequence[IrisRow]) -> int:
     )
     with engine.begin() as connection:
         connection.execute(stmt)
+        connection.execute(delete(Iris).where(Iris.id.not_in([value["id"] for value in values])))
     return len(values)

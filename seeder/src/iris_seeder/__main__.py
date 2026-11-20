@@ -33,7 +33,7 @@ def main() -> int:
     )
     try:
         settings = Settings()
-        logging.getLogger().setLevel(settings.log_level.upper())
+        logging.getLogger().setLevel(settings.log_level)
         run(settings)
     except Exception:
         logger.exception("Seeding failed")

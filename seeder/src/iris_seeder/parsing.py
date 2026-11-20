@@ -44,10 +44,15 @@ def read_rows(path: Path) -> list[IrisRow]:
         missing = [column for column in CSV_COLUMNS if column not in (reader.fieldnames or [])]
         if missing:
             raise DatasetParseError(f"{path}:1: missing column(s) {', '.join(missing)}")
-        rows = []
+        rows: list[IrisRow] = []
+        seen: set[int] = set()
         for line, record in enumerate(reader, start=2):
             try:
-                rows.append(IrisRow.model_validate(record))
+                row = IrisRow.model_validate(record)
             except ValidationError as exc:
                 raise DatasetParseError(f"{path}:{line}: {exc}") from exc
+            if row.id in seen:
+                raise DatasetParseError(f"{path}:{line}: duplicate Id {row.id}")
+            seen.add(row.id)
+            rows.append(row)
     return rows
