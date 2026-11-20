@@ -101,6 +101,10 @@ Adding dependencies:
 - Before committing or pushing, show the user a table of the planned commits (number, group, files, message)
   and wait for approval.
 
+## Reviews
+- In review findings (`/code-review`, `code-reviewer`), write every code location as a markdown link
+  with a repo-relative path, e.g. [schemas.py:12](api/src/iris_api/schemas.py#L12), so it opens in the editor.
+
 ## Don't
 - Don't read or edit `.env`; change `.env.example` instead.
 - Don't relax ruff, mypy, ESLint or coverage settings to make an error go away. Fix the code.
