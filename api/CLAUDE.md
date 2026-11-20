@@ -10,7 +10,8 @@ api/
   pyproject.toml
   Dockerfile               # multi-stage, uv, runs gunicorn "iris_api:create_app()"
   src/iris_api/
-    __init__.py            # create_app(config: Settings | None = None) -> Flask
+    __init__.py            # create_app(settings: Settings | None = None, engine: Engine | None = None) -> Flask
+                           #   (engine: tests pass a StaticPool SQLite engine)
     config.py              # Settings (pydantic-settings): DATABASE_URL, LOG_LEVEL
     db.py                  # session per request (teardown_appcontext closes it)
     schemas.py             # Pydantic models: IrisOut, ListQuery, Page/List responses
