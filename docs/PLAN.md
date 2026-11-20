@@ -53,7 +53,8 @@ Config files already exist (`CLAUDE.md`s, `.claude/`, `pyproject.toml`, `Makefil
 
 ## Step 3 — Seeder: loading + database container
 - [x] `loader.py`: `upsert_rows(engine, rows) -> int` with `sqlalchemy.dialects.postgresql.insert(...).on_conflict_do_update`,
-      one transaction, `create_all` first.
+      one transaction, `create_all` first; in the same transaction delete ids not in `rows` (empty `rows` keeps the table).
+      `read_rows` rejects a duplicate `Id` with its line number.
 - [x] `__main__.py`: `main() -> int` — logging setup, run, return 0/1; never raises to the top.
 - [x] `docker-compose.yml` with `db` and `seeder`:
   - `db`: `postgres:17-alpine`, env from `.env`, named volume `pgdata`, healthcheck `pg_isready`,
