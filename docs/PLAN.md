@@ -93,10 +93,13 @@ ends with `SELECT species, count(*) FROM iris GROUP BY 1` = 50/50/50.
 ---
 
 ## Step 5 — List and retrieve
-- [ ] `schemas.py`: `IrisOut` (floats in JSON), `ListResponse`.
-- [ ] `queries.py`: `build_list_query(species, filters)`; `routes.py`: `GET /iris/<species>` and `GET /iris/<species>/<int:id>`.
-- [ ] Tests: each species returns only its rows ordered by id; `count` is correct; unknown species → 404 `species_not_found`;
+- [x] `schemas.py`: `IrisOut` (floats in JSON), `ListResponse`.
+- [x] `queries.py`: `build_list_query(species, filters)`; `routes.py`: `GET /iris/<species>` and `GET /iris/<species>/<int:id>`.
+- [x] Tests: each species returns only its rows ordered by id; `count` is correct; unknown species → 404 `species_not_found`;
       retrieve OK; retrieve with an id of another species → 404 `not_found`; nonexistent id → 404.
+- [x] Review fixes: species ownership in `queries.build_retrieve_query`; ids above int32 → 404 via
+      `<int(max=...)>`; empty `ListQuery(extra="forbid")` + `ApiError` so unknown params → 400 `invalid_query`
+      with `details` (pulled forward from Step 6).
 
 **Done when:** `make check` passes.
 
@@ -105,7 +108,9 @@ ends with `SELECT species, count(*) FROM iris GROUP BY 1` = 50/50/50.
 ## Step 6 — Filters
 - [ ] `ListQuery` Pydantic model with `extra="forbid"`: exact / `_min` / `_max` for the five columns
       (`id*` ints, others `Decimal` with max 1 decimal place); model validator for `_min > _max`.
-- [ ] Translate validation errors to 400 `invalid_query` with `details`.
+- [ ] Errors from the model validator have an empty `loc`: give them `field: "query"` in `details` and name both
+      columns in the message (`id_min must be less than or equal to id_max`). Test: `?id_min=5&id_max=1` → that detail.
+- [x] Translate validation errors to 400 `invalid_query` with `details`. *(Done in Step 5; Step 6 adds the fields.)*
 - [ ] Tests (parametrize!): exact match per column, min only, max only, min+max, combined columns,
       no match → empty list, unknown param, bad number, too many decimals, min > max.
 
@@ -119,6 +124,10 @@ ends with `SELECT species, count(*) FROM iris GROUP BY 1` = 50/50/50.
 - [ ] Tests: no params → `ListResponse` shape; `page=1` → `per_page` 10 by default; `per_page=2` math for
       `total`/`pages`; last partial page; page past the end → empty items; `per_page=0`, `101`, `page=0` → 400;
       pagination + filters together.
+- [ ] An unknown query param → the 400 `invalid_query` error also carries `supported_params`
+      (name → type and allowed values), generated from `ListQuery`'s JSON schema (decimal fields get a simple
+      `{"type": "number", "multipleOf": 0.1}`). Document it in the contract in `api/CLAUDE.md`.
+      Test: `?foo=1` returns `supported_params` with the filter and pagination params.
 
 **Done when:** `make check` passes.
 
