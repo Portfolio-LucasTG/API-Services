@@ -17,11 +17,12 @@ api/
     schemas.py             # Pydantic models: IrisOut, ListQuery, Page/List responses
     queries.py             # build select() from a ListQuery; no Flask imports here
     routes.py              # Blueprint: /health, /iris/<species>, /iris/<species>/<id>
-    errors.py              # error handlers -> JSON error envelope
+    errors.py              # ApiError + error handlers -> JSON error envelope
   tests/
     conftest.py            # app/client fixtures on SQLite in memory + sample rows
     test_health.py  test_list.py  test_retrieve.py
     test_filters.py test_pagination.py test_errors.py
+    test_queries.py        # queries.py without Flask
 ```
 
 ## API contract (source of truth — the frontend depends on it)
@@ -84,6 +85,15 @@ Unhandled exceptions → **500** `internal_error` (logged, no stack trace in the
 Non-GET methods → **405** with the same envelope.
 
 ## Rules
+- **Route functions only parse → query → serialise** (Single Responsibility). Each concern has one home:
+  - parsing/validation of path and query params → small `_parse_*` helpers in `routes.py`
+    backed by Pydantic models in `schemas.py`; they raise `ApiError` on bad input;
+  - every query rule (species ownership, filters, ordering, counting) → `queries.py`;
+  - serialisation → Pydantic response models in `schemas.py`;
+  - turning errors into the JSON envelope → `errors.py` (routes raise `ApiError`, never build error bodies).
+  A route body that needs an `if` beyond "not found → raise" is a sign that logic belongs in one of those modules.
+- Depend on abstractions that are already here (`get_session()`, `build_*_query`, Pydantic models);
+  don't reach into the engine, `request.args` or `jsonify` from more than one place.
 - Validate query params with a Pydantic model (`extra="forbid"`), not by hand.
 - Decimal columns are `Numeric(3, 1)` in the DB; compare with `Decimal`, serialise as JSON numbers (floats).
 - Keep `queries.py` free of Flask so it can be tested on its own.
