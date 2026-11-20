@@ -54,9 +54,11 @@ Results are always ordered by `id` ascending.
 | `<column>_min`  | greater than or equal    |
 | `<column>_max`  | less than or equal       |
 
-- `id*` params are integers; the others are decimals with at most 1 decimal place (e.g. `5.1`).
+- `id*` params are 32-bit integers; the others are decimals with at most 1 decimal place and 3 digits
+  (e.g. `5.1`, max `99.9`, like the `Numeric(3, 1)` columns).
 - Unknown query params → **400** `invalid_query`.
-- Values that don't parse, or `_min` > `_max` for the same column → **400** `invalid_query`.
+- Empty values (`?id=`), repeated params (`?id=1&id=2`), values that don't parse, or `_min` > `_max` for the same column → **400** `invalid_query`.
+  Every `_min` > `_max` conflict gets its own `details` entry (`field: "query"`).
 
 **Pagination** is opt-in: it is applied only if `page` or `per_page` is present.
 - `page`: integer ≥ 1, default `1`.
