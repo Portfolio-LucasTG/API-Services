@@ -10,15 +10,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from iris_api.db import get_session
 from iris_api.errors import ApiError
 from iris_api.queries import build_list_query, build_retrieve_query
-from iris_api.schemas import IrisOut, ListQuery, ListResponse
+from iris_api.schemas import MAX_ID, IrisOut, ListQuery, ListResponse
 from iris_common.models import Species
 
 logger = logging.getLogger("iris_api")
 
 bp = Blueprint("iris", __name__)
-
-# ``Iris.id`` is a 32-bit INTEGER in PostgreSQL; larger ids can't exist, so they 404 at routing.
-_MAX_ID = 2**31 - 1
 
 
 @bp.get("/health")
@@ -41,10 +38,11 @@ def _parse_species(value: str) -> Species:
 
 def _parse_list_query() -> ListQuery:
     try:
-        return ListQuery.model_validate(request.args.to_dict())
+        return ListQuery.model_validate(request.args.to_dict(flat=False))
     except ValidationError as exc:
         details = [
-            {"field": ".".join(str(part) for part in err["loc"]), "message": err["msg"]}
+            # Model-level errors (min > max) have an empty ``loc``.
+            {"field": ".".join(str(part) for part in err["loc"]) or "query", "message": err["msg"]}
             for err in exc.errors()
         ]
         raise ApiError(400, "invalid_query", "Invalid query parameters", details) from None
@@ -53,13 +51,13 @@ def _parse_list_query() -> ListQuery:
 @bp.get("/iris/<species>")
 def list_iris(species: str) -> dict[str, object]:
     """List the flowers of one species, ordered by id."""
-    parsed_species, _query = _parse_species(species), _parse_list_query()
-    rows = get_session().scalars(build_list_query(parsed_species)).all()
+    parsed_species, query = _parse_species(species), _parse_list_query()
+    rows = get_session().scalars(build_list_query(parsed_species, query)).all()
     items = [IrisOut.model_validate(row) for row in rows]
     return ListResponse(items=items, count=len(items)).model_dump()
 
 
-@bp.get(f"/iris/<species>/<int(max={_MAX_ID}):id_>")
+@bp.get(f"/iris/<species>/<int(max={MAX_ID}):id_>")
 def retrieve_iris(species: str, id_: int) -> dict[str, object]:
     """Return one flower; 404 when it does not exist or belongs to another species."""
     row = get_session().scalars(build_retrieve_query(_parse_species(species), id_)).one_or_none()
