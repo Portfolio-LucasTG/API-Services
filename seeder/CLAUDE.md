@@ -15,10 +15,11 @@ with `depends_on: condition: service_completed_successfully`.
 2. **Parse and validate** every row with a Pydantic model.
    CSV header: `Id,SepalLengthCm,SepalWidthCm,PetalLengthCm,PetalWidthCm,Species`.
    Map `Iris-setosa|Iris-versicolor|Iris-virginica` → `setosa|versicolor|virginica`.
-   Any invalid row aborts the run (non-zero exit) with the line number in the error.
+   Any invalid row or duplicate `Id` aborts the run (non-zero exit) with the line number in the error.
 3. **Create the table** if it doesn't exist (`Base.metadata.create_all`, from `iris_common`).
 4. **Upsert** all rows by `id` (PostgreSQL `INSERT ... ON CONFLICT (id) DO UPDATE`) in one transaction.
-   Running the seeder twice must leave exactly 150 rows.
+   In the same transaction, delete rows whose `id` is not in the CSV, so the table matches the dataset
+   (an empty CSV leaves the table untouched). Running the seeder twice must leave exactly 150 rows.
 5. Log a summary: rows read, rows upserted, rows per species.
 
 ## Layout
