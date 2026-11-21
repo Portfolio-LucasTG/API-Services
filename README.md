@@ -8,7 +8,7 @@ and serves it through a read-only Flask REST API.
 | `db`      | PostgreSQL 17                                         | Docker Compose |
 | `seeder`  | One-shot job: gets the CSV and upserts it into `iris` | Docker Compose |
 | `adminer` | Web DB browser (dev only, bound to localhost)         | Docker Compose |
-| `api`     | Flask REST API (read-only)                            | `uv`, locally ([Run the API](#run-the-api)) |
+| `api`     | Flask REST API (read-only, gunicorn)                  | Docker Compose |
 
 A shared library, `common/` (`iris_common`), holds the SQLAlchemy `Iris` model and the
 engine/session helpers used by both the seeder and the API.
@@ -24,7 +24,7 @@ engine/session helpers used by both the seeder and the API.
 ```bash
 cp .env.example .env   # adjust if needed
 make setup             # Python deps (uv workspace) + git hooks
-make up                # start db, run the seeder, start adminer
+make up                # start db, run the seeder, start the api and adminer
 ```
 
 After `make up`, the `iris` table holds the 150 rows (50 per species). The seeder is idempotent:
@@ -34,8 +34,8 @@ running it again (`docker compose run --rm seeder`) leaves exactly 150 rows.
 |---------------------------------------|-------------------------------------------------------------|
 | http://localhost:8081                 | Adminer (system "PostgreSQL", server `db`, user/password `iris`) |
 | `localhost:5432`                      | PostgreSQL (localhost only; databases `iris` and `iris_test`) |
-| http://localhost:5000/health          | API health check, when [run locally](#run-the-api)          |
-| http://localhost:5000/iris/setosa     | API: list one species, when run locally                     |
+| http://localhost:5000/health          | API health check                                            |
+| http://localhost:5000/iris/setosa     | API: list one species                                       |
 
 ## Configuration
 
@@ -50,7 +50,7 @@ All settings are environment variables, read from `.env` (copy [`.env.example`](
 | `DATASET_PATH`        | seeder      | Use this CSV (path inside the container) instead of downloading   |
 | `SEED_ALLOW_FALLBACK` | seeder      | `true`: use the vendored `seeder/data/Iris.csv` if the download fails |
 | `KAGGLE_USERNAME` / `KAGGLE_KEY` | seeder | Only if Kaggle asks for authentication                    |
-| `DB_PORT` / `ADMINER_PORT` | Compose | Ports published on the host (5432 / 8081)                   |
+| `DB_PORT` / `API_PORT` / `ADMINER_PORT` | Compose | Ports published on the host (5432 / 5000 / 8081) |
 
 ## How the data is loaded
 
@@ -66,10 +66,12 @@ The `seeder` runs once, after `db` is healthy, and exits `0` on success or `1` o
 
 ## Run the API
 
-Start it locally against the Compose database:
+`make up` starts the `api` container (gunicorn, 2 workers) once the seeder has finished; Compose marks it
+healthy when `GET /health` answers. To run it outside Docker instead (e.g. with the debugger), stop the container
+and start Flask against the Compose database:
 
 ```bash
-make up   # db + seeder
+docker compose stop api
 DATABASE_URL=postgresql+psycopg://iris:iris@localhost:5432/iris \
   uv run flask --app "iris_api:create_app()" run --port 5000
 ```

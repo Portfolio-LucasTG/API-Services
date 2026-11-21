@@ -8,7 +8,7 @@ Depends on `iris-common` for the `Iris` model and the session factory.
 ```
 api/
   pyproject.toml
-  Dockerfile               # multi-stage, uv, runs gunicorn "iris_api:create_app()"
+  Dockerfile               # same pattern as seeder/Dockerfile, runs gunicorn "iris_api:create_app()"
   src/iris_api/
     __init__.py            # create_app(settings: Settings | None = None, engine: Engine | None = None) -> Flask
                            #   (engine: tests pass a StaticPool SQLite engine)
