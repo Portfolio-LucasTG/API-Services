@@ -2,6 +2,8 @@ import pytest
 from flask import Flask, abort
 from flask.testing import FlaskClient
 
+from iris_api.errors import ApiError
+
 
 def test_unknown_route_is_404_envelope(client: FlaskClient) -> None:
     response = client.get("/nope")
@@ -49,3 +51,19 @@ def test_unexpected_exception_is_500_envelope_without_trace(
     assert "secret detail" not in response.get_data(as_text=True)
     assert "Traceback" not in response.get_data(as_text=True)
     assert "secret detail" in caplog.text
+
+
+def test_extra_never_overwrites_core_keys(app: Flask) -> None:
+    @app.get("/boom-extra")
+    def boom_extra() -> str:
+        extra: dict[str, object] = {"code": "x", "message": "x", "details": "x", "hint": "kept"}
+        raise ApiError(400, "invalid_query", "bad", [{"field": "a", "message": "b"}], extra)
+
+    error = app.test_client().get("/boom-extra").get_json()["error"]
+
+    assert error == {
+        "code": "invalid_query",
+        "message": "bad",
+        "details": [{"field": "a", "message": "b"}],
+        "hint": "kept",
+    }
