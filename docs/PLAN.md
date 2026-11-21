@@ -148,6 +148,7 @@ ends with `SELECT species, count(*) FROM iris GROUP BY 1` = 50/50/50.
 - [ ] `api/Dockerfile` (same pattern as seeder), `CMD ["gunicorn", "-b", "0.0.0.0:5000", "-w", "2", "iris_api:create_app()"]`.
 - [ ] Compose `api`: `depends_on: seeder: condition: service_completed_successfully`,
       healthcheck with `python -c "urllib.request.urlopen('http://localhost:5000/health')"`, port `${API_PORT}:5000`.
+- [ ] Update `README.md` with what this step changes for users (services, URLs, endpoints, commands, env vars).
 
 **Done when:** `make up` then `curl localhost:5000/iris/setosa?page=1` returns 10 items and `total: 50`.
 
@@ -160,6 +161,7 @@ ends with `SELECT species, count(*) FROM iris GROUP BY 1` = 50/50/50.
       exist; ESLint runs with `--max-warnings=0`; coverage thresholds 80 % in `vitest.config.ts`.
 - [ ] `vite.config.ts` dev proxy `/api` → `http://localhost:5000` with prefix rewrite.
 - [ ] Remove the scaffold's demo components/tests.
+- [ ] Update `README.md` with what this step changes for users (services, URLs, endpoints, commands, env vars).
 
 **Done when:** `make check` (now including frontend) passes; `npm run build` passes.
 
@@ -170,6 +172,7 @@ ends with `SELECT species, count(*) FROM iris GROUP BY 1` = 50/50/50.
       carrying `status`, `code`, `message`.
 - [ ] Tests: query string building (omits empty filters, adds pagination only when enabled), successful parse,
       API error envelope → `ApiError`, network failure → `ApiError` with code `network_error`.
+- [ ] Update `README.md` with what this step changes for users (services, URLs, endpoints, commands, env vars).
 
 **Done when:** `make check` passes.
 
@@ -180,6 +183,7 @@ ends with `SELECT species, count(*) FROM iris GROUP BY 1` = 50/50/50.
       `useIrisList` (URL query ⇄ state), `SpeciesListView`, `IrisDetailView`, `NotFoundView`.
 - [ ] Tests: filters apply/clear update the route query; pagination toggle and next/prev; loading/empty/error states;
       unknown species route → not found; row click navigates to detail; detail shows 404 message.
+- [ ] Update `README.md` with what this step changes for users (services, URLs, endpoints, commands, env vars).
 
 **Done when:** `make check` passes; with `make up` running the API and `npm run dev`, the UI works manually.
 
@@ -188,6 +192,7 @@ ends with `SELECT species, count(*) FROM iris GROUP BY 1` = 50/50/50.
 ## Step 12 — Frontend container + full stack
 - [ ] `frontend/Dockerfile` (node:22-alpine build → nginx:alpine), `nginx.conf` with SPA fallback and `/api/` proxy.
 - [ ] Compose `frontend`: `depends_on: api: condition: service_healthy`, port `${FRONTEND_PORT}:80`.
+- [ ] Update `README.md` with what this step changes for users (services, URLs, endpoints, commands, env vars).
 
 **Done when:** `make up && make smoke` prints `smoke OK`; http://localhost:8080 works.
 
@@ -197,5 +202,6 @@ ends with `SELECT species, count(*) FROM iris GROUP BY 1` = 50/50/50.
 - [ ] README: architecture diagram (Mermaid), endpoints with examples, dev workflow, how to run tests.
 - [ ] CI green on GitHub (python, frontend, compose jobs).
 - [ ] Run `code-reviewer` on the whole repo (`git diff` against the first commit) and fix findings.
+- [ ] Update `README.md` with what this step changes for users (services, URLs, endpoints, commands, env vars).
 
 **Done when:** CI is green on `main`.
