@@ -145,10 +145,11 @@ ends with `SELECT species, count(*) FROM iris GROUP BY 1` = 50/50/50.
 ---
 
 ## Step 8 — API container
-- [ ] `api/Dockerfile` (same pattern as seeder), `CMD ["gunicorn", "-b", "0.0.0.0:5000", "-w", "2", "iris_api:create_app()"]`.
-- [ ] Compose `api`: `depends_on: seeder: condition: service_completed_successfully`,
-      healthcheck with `python -c "urllib.request.urlopen('http://localhost:5000/health')"`, port `${API_PORT}:5000`.
-- [ ] Update `README.md` with what this step changes for users (services, URLs, endpoints, commands, env vars).
+- [x] `api/Dockerfile` (same pattern as seeder), `CMD ["gunicorn", "-b", "0.0.0.0:5000", "-w", "2", "iris_api:create_app()"]`.
+- [x] Compose `api`: `depends_on: seeder: condition: service_completed_successfully`,
+      healthcheck with `python -c "urllib.request.urlopen('http://localhost:5000/health')"`, port `127.0.0.1:${API_PORT}:5000`
+      (localhost only, like `db` and `adminer`; the frontend reaches it over the Compose network).
+- [x] Update `README.md` with what this step changes for users (services, URLs, endpoints, commands, env vars).
 
 **Done when:** `make up` then `curl localhost:5000/iris/setosa?page=1` returns 10 items and `total: 50`.
 
