@@ -9,11 +9,26 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from iris_api.db import get_session
 from iris_api.errors import ApiError
-from iris_api.queries import build_list_query, build_retrieve_query
-from iris_api.schemas import MAX_ID, IrisOut, ListQuery, ListResponse
+from iris_api.queries import (
+    build_count_query,
+    build_list_query,
+    build_page_query,
+    build_retrieve_query,
+)
+from iris_api.schemas import (
+    MAX_ID,
+    IrisOut,
+    ListQuery,
+    ListResponse,
+    PageResponse,
+    supported_params,
+)
 from iris_common.models import Species
 
 logger = logging.getLogger("iris_api")
+
+# The contract: list results are always ordered by id ascending.
+DEFAULT_ORDER_BY = "id+"
 
 bp = Blueprint("iris", __name__)
 
@@ -45,16 +60,31 @@ def _parse_list_query() -> ListQuery:
             {"field": ".".join(str(part) for part in err["loc"]) or "query", "message": err["msg"]}
             for err in exc.errors()
         ]
-        raise ApiError(400, "invalid_query", "Invalid query parameters", details) from None
+        unknown = any(err["type"] == "extra_forbidden" for err in exc.errors())
+        extra: dict[str, object] | None = (
+            {"supported_params": supported_params()} if unknown else None
+        )
+        raise ApiError(400, "invalid_query", "Invalid query parameters", details, extra) from None
 
 
 @bp.get("/iris/<species>")
 def list_iris(species: str) -> dict[str, object]:
-    """List the flowers of one species, ordered by id."""
+    """List the flowers of one species, ordered by id; paginated when asked to."""
     parsed_species, query = _parse_species(species), _parse_list_query()
-    rows = get_session().scalars(build_list_query(parsed_species, query)).all()
-    items = [IrisOut.model_validate(row) for row in rows]
-    return ListResponse(items=items, count=len(items)).model_dump()
+    session = get_session()
+    if not query.paginated:
+        rows = session.scalars(
+            build_list_query(parsed_species, query, order_by=DEFAULT_ORDER_BY)
+        ).all()
+        items = [IrisOut.model_validate(row) for row in rows]
+        return ListResponse(items=items, count=len(items)).model_dump()
+    rows = session.scalars(build_page_query(parsed_species, query, order_by=DEFAULT_ORDER_BY)).all()
+    return PageResponse(
+        items=[IrisOut.model_validate(row) for row in rows],
+        page=query.page,
+        per_page=query.per_page,
+        total=session.scalar(build_count_query(parsed_species, query)) or 0,
+    ).model_dump()
 
 
 @bp.get(f"/iris/<species>/<int(max={MAX_ID}):id_>")

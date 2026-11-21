@@ -1,10 +1,21 @@
 """Pydantic models for API query parameters and responses."""
 
+import functools
+import math
 from decimal import Decimal
 from typing import Annotated, Self
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
-from pydantic_core import InitErrorDetails, PydanticCustomError
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    computed_field,
+    field_validator,
+    model_validator,
+)
+from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
+from pydantic_core import InitErrorDetails, PydanticCustomError, core_schema
 
 # Columns that accept ``<column>``, ``<column>_min`` and ``<column>_max`` filters.
 FILTER_COLUMNS = ("id", "sepal_length_cm", "sepal_width_cm", "petal_length_cm", "petal_width_cm")
@@ -15,6 +26,8 @@ MAX_ID = 2**31 - 1
 Id = Annotated[int, Field(ge=-MAX_ID - 1, le=MAX_ID)]
 
 Measure = Annotated[Decimal, Field(max_digits=3, decimal_places=1)]
+
+PAGINATION_PARAMS = frozenset({"page", "per_page"})
 
 
 class ListQuery(BaseModel):
@@ -37,6 +50,14 @@ class ListQuery(BaseModel):
     petal_width_cm: Measure | None = None
     petal_width_cm_min: Measure | None = None
     petal_width_cm_max: Measure | None = None
+    # Capped at MAX_ID so the OFFSET stays far inside PostgreSQL's BIGINT.
+    page: int = Field(1, ge=1, le=MAX_ID)
+    per_page: int = Field(10, ge=1, le=100)
+
+    @property
+    def paginated(self) -> bool:
+        """Pagination is opt-in: on only when ``page`` or ``per_page`` was sent."""
+        return bool(PAGINATION_PARAMS & self.model_fields_set)
 
     @field_validator("*", mode="before")
     @classmethod
@@ -89,3 +110,43 @@ class ListResponse(BaseModel):
 
     items: list[IrisOut]
     count: int
+
+
+class PageResponse(BaseModel):
+    """Paginated list response; ``total`` and ``pages`` reflect the filters."""
+
+    items: list[IrisOut]
+    page: int
+    per_page: int
+    total: int
+
+    @computed_field  # type: ignore[prop-decorator]  # mypy can't type a decorated property
+    @property
+    def pages(self) -> int:
+        """Number of pages for ``total`` rows."""
+        return math.ceil(self.total / self.per_page)
+
+
+class _ParamsSchema(GenerateJsonSchema):
+    """JSON schema of query params as a client sees them: plain numbers, no ``null`` option."""
+
+    def decimal_schema(self, schema: core_schema.DecimalSchema) -> JsonSchemaValue:
+        value: JsonSchemaValue = {"type": "number", "format": "float"}
+        if (places := schema.get("decimal_places")) is not None:
+            value["decimal_places"] = places
+        return value
+
+    def nullable_schema(self, schema: core_schema.NullableSchema) -> JsonSchemaValue:
+        return self.generate_inner(schema["schema"])
+
+
+@functools.cache  # the schema never changes; callers must not mutate the result
+def supported_params() -> dict[str, JsonSchemaValue]:
+    """Map each query param of ``ListQuery`` to its type and allowed values."""
+    properties: dict[str, JsonSchemaValue] = ListQuery.model_json_schema(
+        schema_generator=_ParamsSchema
+    )["properties"]
+    return {
+        name: {k: v for k, v in prop.items() if k != "title" and not (k == "default" and v is None)}
+        for name, prop in properties.items()
+    }

@@ -11,16 +11,25 @@ ErrorResult = tuple[Response, int, list[tuple[str, str]]]
 
 
 class ApiError(Exception):
-    """An expected client error (``species_not_found``, ``invalid_query``, ...)."""
+    """An expected client error (``species_not_found``, ``invalid_query``, ...).
+
+    ``extra`` adds keys to the ``error`` object (e.g. ``supported_params``).
+    """
 
     def __init__(
-        self, status: int, code: str, message: str, details: list[dict[str, str]] | None = None
+        self,
+        status: int,
+        code: str,
+        message: str,
+        details: list[dict[str, str]] | None = None,
+        extra: dict[str, object] | None = None,
     ) -> None:
         super().__init__(message)
         self.status = status
         self.code = code
         self.message = message
         self.details = details
+        self.extra = extra
 
 
 def error_response(
@@ -28,17 +37,17 @@ def error_response(
     code: str,
     message: str,
     headers: list[tuple[str, str]] | None = None,
-    details: list[dict[str, str]] | None = None,
+    extra: dict[str, object] | None = None,
 ) -> ErrorResult:
-    """Build ``{"error": {"code", "message", "details"?}}`` with ``status``."""
-    error: dict[str, object] = {"code": code, "message": message}
-    if details is not None:
-        error["details"] = details
-    return jsonify(error=error), status, headers or []
+    """Build ``{"error": {**extra, "code", "message"}}`` with ``status``."""
+    # ``extra`` first so it can never overwrite ``code`` or ``message``.
+    return jsonify(error={**(extra or {}), "code": code, "message": message}), status, headers or []
 
 
 def _handle_api_error(exc: ApiError) -> ErrorResult:
-    return error_response(exc.status, exc.code, exc.message, details=exc.details)
+    # ``details`` last so ``extra`` can never overwrite it either.
+    details = {} if exc.details is None else {"details": exc.details}
+    return error_response(exc.status, exc.code, exc.message, extra=(exc.extra or {}) | details)
 
 
 def _handle_http_exception(exc: HTTPException) -> ErrorResult:
