@@ -3,7 +3,7 @@
 import os
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import Engine, text
 
 from iris_api import create_app
 from iris_api.config import Settings
@@ -28,6 +28,15 @@ def test_request_transaction_is_repeatable_read_on_postgres() -> None:
     app = create_app(Settings(database_url=url))
 
     with app.app_context():
-        level = get_session().execute(text("SHOW transaction_isolation")).scalar()
+        bind = get_session().get_bind()  # doesn't connect
+    assert isinstance(bind, Engine)
+
+    # The app owns this engine; close its pool even on failure, or the open connection
+    # fails a later test when it is garbage-collected.
+    try:
+        with app.app_context():
+            level = get_session().execute(text("SHOW transaction_isolation")).scalar()
+    finally:
+        bind.dispose()
 
     assert level == "repeatable read"
