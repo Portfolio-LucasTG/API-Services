@@ -14,4 +14,4 @@ Implement one step of the plan.
    Never weaken lint/type/coverage settings to get green.
 6. Tick the step's boxes in `docs/PLAN.md`.
 7. Finish with: files changed, test count/coverage, anything I must do by hand,
-   and a suggested Conventional Commit message. Do not commit unless I ask.
+   and the planned-commit table from the Git section of `CLAUDE.md`. Do not commit unless I ask.
