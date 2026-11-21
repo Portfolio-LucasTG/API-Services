@@ -122,15 +122,23 @@ ends with `SELECT species, count(*) FROM iris GROUP BY 1` = 50/50/50.
 ---
 
 ## Step 7 — Pagination
-- [ ] `page` / `per_page` in `ListQuery`; pagination only when at least one is present; `PageResponse`.
-- [ ] Count with `select(func.count()).select_from(subquery)` using the same filters.
-- [ ] Tests: no params → `ListResponse` shape; `page=1` → `per_page` 10 by default; `per_page=2` math for
+- [x] `page` / `per_page` in `ListQuery`; pagination only when at least one is present; `PageResponse`.
+- [x] Count with `select(func.count()).select_from(subquery)` using the same filters.
+- [x] Tests: no params → `ListResponse` shape; `page=1` → `per_page` 10 by default; `per_page=2` math for
       `total`/`pages`; last partial page; page past the end → empty items; `per_page=0`, `101`, `page=0` → 400;
       pagination + filters together.
-- [ ] An unknown query param → the 400 `invalid_query` error also carries `supported_params`
+- [x] An unknown query param → the 400 `invalid_query` error also carries `supported_params`
       (name → type and allowed values), generated from `ListQuery`'s JSON schema (decimal fields get a simple
-      `{"type": "number", "multipleOf": 0.1}`). Document it in the contract in `api/CLAUDE.md`.
+      `{"type": "number", "format": "float", "decimal_places": 1}`). Document it in the contract in `api/CLAUDE.md`.
       Test: `?foo=1` returns `supported_params` with the filter and pagination params.
+- [x] Review fixes: `build_list_query(species, query, order_by=None)` is unordered unless an order rule
+      (`"<column>+"` / `"<column>-"`) is passed, so the count query skips sorting;
+      the API passes `order_by=DEFAULT_ORDER_BY` (`"id+"`, a constant at the top of `routes.py`);
+      an invalid rule raises `ValueError`. `extra` in the error envelope can't overwrite `code`/`message`/`details`.
+      Tests for repeated `page`/`per_page` and for the largest page (`2147483647` → 200, empty `items`).
+      On PostgreSQL the API engine uses `REPEATABLE READ`, so a page's `items` and `total` come from one snapshot
+      (integration test checks `SHOW transaction_isolation`). `supported_params()` is cached.
+- [x] Update `README.md` with what this step changes for users (services, URLs, endpoints, commands, env vars).
 
 **Done when:** `make check` passes.
 
