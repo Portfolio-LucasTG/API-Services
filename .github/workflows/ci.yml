@@ -68,11 +68,12 @@ jobs:
       - id: exists
         run: echo "present=$([ -f docker-compose.yml ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - if: steps.exists.outputs.present == 'true'
-        run: cp .env.example .env
+        # Compose passes only env_file (.env) to the seeder; use the vendored CSV, no Kaggle download in CI.
+        run: |
+          cp .env.example .env
+          sed -i 's|^DATASET_PATH=.*|DATASET_PATH=/app/seeder/data/Iris.csv|' .env
       - if: steps.exists.outputs.present == 'true'
         run: docker compose up -d --build --wait
-        env:
-          DATASET_PATH: /app/data/Iris.csv   # no Kaggle download in CI
       # smoke hits api (:5000) and frontend (:8080); skip until the full stack exists
       - if: steps.exists.outputs.present == 'true' && hashFiles('frontend/Dockerfile') != ''
         run: make smoke
