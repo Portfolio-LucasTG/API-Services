@@ -56,14 +56,22 @@ Results are always ordered by `id` ascending.
 
 - `id*` params are 32-bit integers; the others are decimals with at most 1 decimal place and 3 digits
   (e.g. `5.1`, max `99.9`, like the `Numeric(3, 1)` columns).
-- Unknown query params → **400** `invalid_query`.
+- Unknown query params → **400** `invalid_query`; the `error` object then also has `supported_params`,
+  generated from `ListQuery`'s JSON schema (name → type and allowed values; decimals are a float with their number of decimal places):
+  ```json
+  {"id_min": {"type": "integer", "minimum": -2147483648, "maximum": 2147483647},
+   "sepal_length_cm": {"type": "number", "format": "float", "decimal_places": 1},
+   "page": {"type": "integer", "minimum": 1, "maximum": 2147483647, "default": 1},
+   "per_page": {"type": "integer", "minimum": 1, "maximum": 100, "default": 10}, ...}
+  ```
 - Empty values (`?id=`), repeated params (`?id=1&id=2`), values that don't parse, or `_min` > `_max` for the same column → **400** `invalid_query`.
   Every `_min` > `_max` conflict gets its own `details` entry (`field: "query"`).
 
 **Pagination** is opt-in: it is applied only if `page` or `per_page` is present.
-- `page`: integer ≥ 1, default `1`.
+- `page`: integer 1–2147483647, default `1`.
 - `per_page`: integer 1–100, default **10**.
-- `page` beyond the last page → `200` with empty `items`.
+- `page` beyond the last page → `200` with empty `items`. No match → `total: 0`, `pages: 0`.
+- Out-of-range, empty, repeated or non-integer values → **400** `invalid_query`.
 
 Response without pagination:
 ```json
